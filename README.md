@@ -1,47 +1,35 @@
-# 🎙️ Detector de Sotaque Brasileiro - IA
+# 🎙️ Brazilian Accent Detector - Deep Learning Project
 
-Sistema completo de detecção de sotaques brasileiros usando Deep Learning, com otimizações de multithreading e as melhores práticas de Machine Learning.
+A comprehensive deep learning system for detecting and classifying Brazilian Portuguese accents using audio analysis and neural networks.
 
-## 📋 Índice
+## 📋 Project Overview
 
-- [Características](#características)
-- [Requisitos](#requisitos)
-- [Instalação](#instalação)
-- [Estrutura do Projeto](#estrutura-do-projeto)
-- [Uso](#uso)
-- [Modelos Disponíveis](#modelos-disponíveis)
-- [Otimizações](#otimizações)
-- [Resultados](#resultados)
-- [Arquitetura](#arquitetura)
+This project implements multiple deep learning architectures to classify Brazilian Portuguese accents from different states. It demonstrates key concepts in audio processing, neural network design, and machine learning best practices suitable for academic research and presentation.
 
-## 🎯 Características
+### Key Features
 
-- ✅ **Múltiplos Modelos**: CNN, ResNet, Attention CNN, LSTM
-- ✅ **Data Augmentation**: Time stretching, pitch shifting, ruído
-- ✅ **Multithreading Otimizado**: DataLoader com workers paralelos
-- ✅ **Mixed Precision Training**: Treinamento mais rápido com menor uso de memória
-- ✅ **Early Stopping**: Prevenção de overfitting
-- ✅ **Learning Rate Scheduling**: Ajuste automático da taxa de aprendizado
-- ✅ **Visualizações Completas**: Gráficos de treinamento, matriz de confusão
-- ✅ **Métricas Detalhadas**: Acurácia, F1-Score, Precision, Recall
-- ✅ **Análise Exploratória**: Script completo de EDA
+- **Multiple Neural Network Architectures**: CNN, ResNet, Attention-based CNN, and LSTM
+- **Audio Feature Extraction**: Mel-spectrograms, MFCC, Chroma, and Spectral Contrast
+- **Data Augmentation**: Time stretching, pitch shifting, and noise injection
+- **Training Optimizations**: Mixed precision training, multi-threaded data loading, early stopping
+- **Comprehensive Visualizations**: Training metrics, confusion matrices, and data analysis
 
-## 🔧 Requisitos
+## 🔧 Requirements
 
 - Python 3.8+
 - PyTorch 2.0+
-- CUDA (opcional, para GPU)
-- 8GB+ RAM recomendado
-- GPU com 4GB+ VRAM (opcional)
+- CUDA (optional, for GPU acceleration)
+- 8GB+ RAM recommended
+- GPU with 4GB+ VRAM (optional but recommended)
 
-## 📦 Instalação
+## 📦 Installation
 
-### 1. Clone o repositório
+### 1. Clone the Repository
 ```bash
 cd detector_sotaque
 ```
 
-### 2. Crie um ambiente virtual
+### 2. Create Virtual Environment
 ```bash
 # Windows
 python -m venv venv
@@ -52,286 +40,303 @@ python -m venv venv
 source venv/bin/activate
 ```
 
-### 3. Instale as dependências
+### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-## 📁 Estrutura do Projeto
+## 📁 Project Structure
 
 ```
 detector_sotaque/
 ├── sotaque-brasileiro-data/          # Dataset
-│   ├── accent/                       # Arquivos de áudio (.wav)
-│   └── sotaque-brasileiro.csv        # Metadados
-├── dataset.py                        # Dataset customizado e DataLoaders
-├── models.py                         # Arquiteturas de modelos
-├── train.py                          # Script de treinamento
-├── predict.py                        # Script de inferência
-├── analyze_data.py                   # Análise exploratória
-├── requirements.txt                  # Dependências
-├── README.md                         # Documentação
-└── experiments/                      # Checkpoints e logs (criado automaticamente)
+│   ├── accent/                       # Audio files (.wav)
+│   └── sotaque-brasileiro.csv        # Metadata
+├── dataset.py                        # Custom Dataset and DataLoaders
+├── models.py                         # Neural Network Architectures
+├── train.py                          # Training Script
+├── predict.py                        # Inference Script
+├── analyze_data.py                   # Exploratory Data Analysis
+├── main.py                           # CLI Interface
+├── config.py                         # Configuration Settings
+├── utils.py                          # Utility Functions
+├── requirements.txt                  # Dependencies
+├── data_analysis/                    # EDA Visualizations (generated)
+├── experiments/                      # Model Checkpoints & Results (generated)
+└── README.md                         # Documentation
 ```
 
-## 🚀 Uso
+## 🚀 Usage
 
-### 1. Análise Exploratória dos Dados
+### 1. Exploratory Data Analysis
 
-Antes de treinar, explore o dataset:
+Analyze the dataset distribution and characteristics:
 
 ```bash
-python analyze_data.py
+python main.py analyze
 ```
 
-Isso gerará:
-- Visualizações da distribuição dos dados
-- Estatísticas detalhadas
-- Matriz de migração entre estados
-- Relatório JSON com métricas
+This generates:
+- Dataset distribution visualizations
+- Statistical summaries
+- State migration patterns
+- Detailed JSON report
 
-### 2. Treinamento
+### 2. Training
 
-#### Treinamento Básico
+#### Basic Training
 ```bash
-python train.py
+python main.py train
 ```
 
-#### Personalizar Configurações
-
-Edite as configurações no arquivo `train.py`:
-
-```python
-MODEL_NAME = "attention_cnn"  # 'cnn', 'resnet', 'attention_cnn', 'lstm'
-BATCH_SIZE = 16               # Ajuste conforme sua GPU
-NUM_WORKERS = 4               # Número de CPUs para carregamento de dados
-NUM_EPOCHS = 50
-LEARNING_RATE = 0.001
-```
-
-#### Treinar com GPU
+#### Custom Configuration
 ```bash
-# Automático - detecta GPU se disponível
-python train.py
+python main.py train --model attention_cnn --epochs 50 --batch-size 16 --lr 0.001
 ```
 
-#### Treinar apenas com CPU
-```python
-# Em train.py, altere:
-trainer = AccentDetectorTrainer(
-    ...
-    device='cpu'
-)
-```
+#### Available Parameters
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--model` | attention_cnn | Model architecture (cnn, resnet, attention_cnn, lstm) |
+| `--epochs` | 50 | Number of training epochs |
+| `--batch-size` | 16 | Batch size |
+| `--workers` | 4 | Number of parallel data loading workers |
+| `--lr` | 0.001 | Learning rate |
+| `--patience` | 15 | Early stopping patience |
+| `--label-column` | birth_state | Label column (birth_state or current_state) |
 
-### 3. Fazer Predições
+### 3. Prediction
 
-Após treinar, use o modelo para fazer predições:
+After training, use the model for inference:
 
 ```bash
-python predict.py experiments/attention_cnn_TIMESTAMP/best_model.pth audio.wav
+# Single audio file
+python main.py predict --checkpoint experiments/[EXPERIMENT]/best_model.pth --input audio.wav
+
+# Directory of audio files
+python main.py predict --checkpoint experiments/[EXPERIMENT]/best_model.pth --input audios/ --output results.json
 ```
 
-Exemplo de saída:
-```
-============================================================
-Áudio: audio.wav
-Sotaque Predito: SP
-Confiança: 87.45%
-
-Probabilidades por classe:
-     SP: 87.45% ████████████████████████████████████████████
-     RJ: 8.32%  ████
-     MG: 2.15%  █
-     RS: 1.08%  
-============================================================
+### 4. List Trained Models
+```bash
+python main.py list-experiments
 ```
 
-### 4. Avaliar Modelo
+### 5. Interactive Mode
+```bash
+python main.py interactive
+```
 
-O script de treinamento já avalia automaticamente o modelo no conjunto de teste ao final do treinamento.
+## 🧠 Neural Network Architectures
 
-## 🧠 Modelos Disponíveis
+### 1. CNN (Convolutional Neural Network)
+- 4 convolutional blocks with batch normalization
+- MaxPooling layers for spatial downsampling
+- Fast training and inference
+- Best for: Baseline experiments and resource-constrained environments
 
-### 1. **CNN (Convolutional Neural Network)**
-- Modelo base com 4 blocos convolucionais
-- Rápido e eficiente
-- Bom para datasets menores
+### 2. ResNet (Residual Network)
+- Deep architecture with skip connections
+- Addresses vanishing gradient problem
+- Better generalization capabilities
+- Best for: High-accuracy requirements with sufficient data
 
-### 2. **ResNet (Residual Network)**
-- Conexões residuais para treinar redes mais profundas
-- Melhor generalização
-- Recomendado para datasets maiores
+### 3. Attention CNN (Recommended)
+- CNN with self-attention mechanisms
+- Focuses on discriminative audio features
+- Spatial and channel attention modules
+- Best for: Overall performance and interpretability
 
-### 3. **Attention CNN** (Recomendado)
-- CNN com mecanismos de atenção
-- Foca nas partes mais importantes do áudio
-- Melhor performance geral
+### 4. LSTM (Long Short-Term Memory)
+- Recurrent architecture for temporal sequences
+- Captures long-range dependencies
+- Slower training but effective for temporal patterns
+- Best for: Temporal feature modeling
 
-### 4. **LSTM (Long Short-Term Memory)**
-- Modelo recorrente para sequências temporais
-- Captura dependências de longo prazo
-- Mais lento, mas muito eficaz
+## 📊 Audio Feature Extraction Pipeline
 
-## ⚡ Otimizações Implementadas
+```
+Audio WAV File (16kHz)
+    ↓
+Normalization & Preprocessing
+    ↓
+Feature Extraction
+    ├── Mel-Spectrogram (128 bands)
+    ├── MFCC (13 coefficients + Δ + ΔΔ)
+    ├── Chroma Features (12 bins)
+    └── Spectral Contrast (7 bands)
+    ↓
+Data Augmentation (Training Only)
+    ├── Time Stretching (±10%)
+    ├── Pitch Shifting (±2 semitones)
+    └── Gaussian Noise
+    ↓
+Neural Network
+    ↓
+Classification (State Labels)
+```
 
-### Multithreading
-- **DataLoader Workers**: Carregamento paralelo de dados
-- **Persistent Workers**: Workers mantidos vivos entre épocas
-- **Pin Memory**: Transferência mais rápida para GPU
+## ⚡ Optimization Techniques
 
+### 1. Multi-threaded Data Loading
 ```python
 DataLoader(
     dataset,
-    num_workers=4,          # 4 threads paralelas
-    pin_memory=True,        # Otimização para GPU
-    persistent_workers=True # Workers persistentes
+    num_workers=4,          # Parallel workers
+    pin_memory=True,        # GPU optimization
+    persistent_workers=True # Keep workers alive
 )
 ```
 
-### Mixed Precision Training
-- Usa float16 onde possível para economizar memória
-- Mantém float32 onde necessário para estabilidade
-- ~2x mais rápido em GPUs modernas
+### 2. Mixed Precision Training
+- Uses float16 for memory efficiency
+- Maintains float32 where necessary for stability
+- ~2x speedup on modern GPUs
 
-```python
-# Automático com GradScaler
-with autocast():
-    outputs = model(inputs)
-    loss = criterion(outputs, labels)
-```
+### 3. Learning Rate Scheduling
+- ReduceLROnPlateau scheduler
+- Automatically reduces LR when validation plateaus
+- Helps fine-tune convergence
 
-### Data Augmentation
-- **Time Stretching**: Varia velocidade do áudio
-- **Pitch Shifting**: Altera tom
-- **Ruído Gaussiano**: Aumenta robustez
-- Aplicado apenas no conjunto de treino
+### 4. Early Stopping
+- Monitors validation F1-score
+- Prevents overfitting
+- Saves training time
 
-## 📊 Resultados
+## 📈 Results & Evaluation
 
-O sistema gera automaticamente:
+The system automatically generates:
 
-### Durante o Treinamento
-- Loss de treino e validação por época
-- Acurácia de validação
-- F1-Score
-- Checkpoints do melhor modelo
+### During Training
+- Loss and accuracy curves (train/validation)
+- F1-Score, Precision, Recall per epoch
+- Best model checkpointing
 
-### Após o Treinamento
-- **Gráficos de treinamento**: `training_history.png`
-- **Matriz de confusão**: `confusion_matrix_teste.png`
-- **Relatório de classificação**: Precision, Recall, F1 por classe
-- **Arquivo JSON**: `training_info.json` com todos os detalhes
+### After Training
+- **Training History Graph**: `training_history.png`
+- **Confusion Matrix**: `confusion_matrix_teste.png`
+- **Classification Report**: Detailed metrics per class
+- **Training Info**: `training_info.json` with hyperparameters and results
+- **Evaluation Metrics**: `evaluation_teste.json` with test set performance
 
-### Estrutura de Saída
+### Example Output Structure
 ```
 experiments/
-└── attention_cnn_20231201_120000/
-    ├── best_model.pth                    # Melhor modelo
-    ├── training_history.png              # Gráficos de treinamento
-    ├── confusion_matrix_teste.png        # Matriz de confusão
-    ├── training_info.json                # Informações do treinamento
-    └── evaluation_teste.json             # Métricas detalhadas
+└── attention_cnn_20241201_120000/
+    ├── best_model.pth                    # Trained model
+    ├── training_history.png              # Loss/accuracy plots
+    ├── confusion_matrix_teste.png        # Test set confusion matrix
+    ├── training_info.json                # Training configuration
+    └── evaluation_teste.json             # Test metrics
 ```
 
-## 🏗️ Arquitetura
+## 🎓 Machine Learning Best Practices Implemented
 
-### Pipeline de Processamento
+- ✅ **Stratified Train/Val/Test Split**: Maintains class distribution across splits
+- ✅ **Reproducibility**: Fixed random seeds across libraries
+- ✅ **Data Augmentation**: Only applied to training set
+- ✅ **Regularization**: Dropout, batch normalization
+- ✅ **Comprehensive Logging**: All metrics tracked and saved
+- ✅ **Checkpoint Management**: Automatic best model saving
+- ✅ **Cross-validation Ready**: Easy adaptation for k-fold CV
+- ✅ **Performance Monitoring**: Real-time metrics during training
 
-```
-Áudio WAV
-    ↓
-Carregamento (librosa)
-    ↓
-Normalização
-    ↓
-Ajuste de Comprimento (5 segundos)
-    ↓
-Data Augmentation (treino apenas)
-    ↓
-Extração de Features
-    ├── MFCC
-    ├── Mel-Spectrogram (principal)
-    ├── Chroma
-    └── Spectral Contrast
-    ↓
-Modelo Deep Learning
-    ↓
-Classificação de Sotaque
-```
+## 💡 Performance Tips
 
-### Features Extraídas
+### Improving Accuracy
+1. Increase number of epochs (100+)
+2. Use Attention CNN or ResNet architecture
+3. Tune learning rate (try 0.0001 or 0.0005)
+4. Adjust data augmentation parameters
+5. Experiment with different feature combinations
 
-1. **Mel-Spectrogram**: Representação tempo-frequência
-2. **MFCC**: Coeficientes cepstrais de mel
-3. **Delta MFCC**: Primeira e segunda derivadas
-4. **Chroma**: Características harmônicas
-5. **Spectral Contrast**: Contraste espectral
+### Faster Training
+1. Use GPU with CUDA support
+2. Increase batch size (if memory permits)
+3. Increase num_workers (4-8 typically optimal)
+4. Enable mixed precision training
+5. Use CNN instead of deeper architectures
 
-## 🎓 Boas Práticas Implementadas
-
-- ✅ **Stratified Split**: Divisão estratificada por classe
-- ✅ **Cross-Validation Ready**: Fácil adaptação para k-fold
-- ✅ **Reproducibilidade**: Seeds fixadas
-- ✅ **Logging Completo**: Todas as métricas salvas
-- ✅ **Checkpoint System**: Salva melhor modelo automaticamente
-- ✅ **Early Stopping**: Para quando não há melhoria
-- ✅ **Learning Rate Scheduling**: Ajuste automático
-- ✅ **Gradient Scaling**: Para mixed precision
-- ✅ **Memory Optimization**: Pin memory e non-blocking transfers
-
-## 📈 Dicas de Performance
-
-### Para Melhorar Acurácia
-1. Aumente o número de épocas
-2. Use o modelo `attention_cnn` ou `resnet`
-3. Ajuste o learning rate (tente 0.0001 ou 0.0005)
-4. Aumente data augmentation
-
-### Para Treinar Mais Rápido
-1. Use GPU se disponível
-2. Aumente `batch_size` (se memória permitir)
-3. Aumente `num_workers` (4-8 geralmente ideal)
-4. Use mixed precision training
-5. Reduza resolução de features se necessário
-
-### Para Economizar Memória
-1. Reduza `batch_size`
-2. Use modelo `cnn` ao invés de `resnet`
-3. Reduza número de mel bands
-4. Desative mixed precision se causar problemas
+### Memory Optimization
+1. Reduce batch size
+2. Use lighter model (CNN)
+3. Reduce number of mel bands
+4. Disable mixed precision if causing issues
 
 ## 🐛 Troubleshooting
 
-### Erro: "Out of Memory"
-- Reduza `batch_size`
-- Reduza `num_workers`
-- Use CPU ao invés de GPU
+### Out of Memory Error
+```bash
+# Solution: Reduce batch size
+python main.py train --batch-size 8
+```
 
-### Erro: "DataLoader Workers"
-- No Windows, defina `num_workers=0`
-- Ou use: `persistent_workers=False`
+### CUDA Out of Memory
+```bash
+# Option 1: Reduce batch size
+python main.py train --batch-size 4
 
-### Modelo não aprende (loss não diminui)
-- Reduza learning rate
-- Verifique balanceamento de classes
-- Aumente número de épocas
-- Verifique data augmentation (pode estar muito agressivo)
+# Option 2: Use CPU
+python main.py train --device cpu
+```
 
-## 📝 Licença
+### DataLoader Workers Error (Windows)
+```bash
+# Solution: Set workers to 0
+python main.py train --workers 0
+```
 
-Este projeto é open source e está disponível sob a licença MIT.
+### Model Not Learning (Loss Plateau)
+```bash
+# Solution: Reduce learning rate
+python main.py train --lr 0.0001
+```
 
-## 🤝 Contribuindo
+## 📊 Dataset Information
 
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou pull requests.
+The dataset contains:
+- **819 audio samples** of Brazilian Portuguese speech
+- **11 state labels**: BA, CE, DF, ES, MG, PE, PR, RJ, RN, RS, SP
+- **Metadata**: Birth state, current state, age, gender, profession, text
 
-## 📧 Contato
+Classification targets:
+- Birth state (`--label-column birth_state`)
+- Current state (`--label-column current_state`)
 
-Para dúvidas ou sugestões, abra uma issue no repositório.
+## 🔬 Academic Context
+
+This project demonstrates key concepts in:
+- **Deep Learning**: Multiple architectures and training strategies
+- **Audio Signal Processing**: Feature extraction from raw waveforms
+- **Data Science**: EDA, visualization, statistical analysis
+- **Software Engineering**: Modular design, CLI interfaces, logging
+- **Research Methodology**: Reproducibility, evaluation metrics, ablation studies
+
+Ideal for:
+- AI/ML course projects and presentations
+- Research in speech recognition and accent classification
+- Learning practical deep learning implementation
+- Understanding audio processing pipelines
+
+## 📝 Citation
+
+If you use this project in your research or presentation, please cite:
+
+```
+Brazilian Accent Detector - Deep Learning Project
+https://github.com/[your-username]/detector_sotaque
+```
+
+## 📚 References
+
+- PyTorch Documentation: https://pytorch.org/docs/
+- Librosa (Audio Processing): https://librosa.org/
+- Deep Learning for Audio: https://arxiv.org/abs/1912.10544
+
+## 📧 Contact
+
+For questions, issues, or contributions, please open an issue in the repository.
 
 ---
 
-**Desenvolvido com ❤️ usando PyTorch e as melhores práticas de Deep Learning**
-
-
+**Built with PyTorch and best practices in Deep Learning**

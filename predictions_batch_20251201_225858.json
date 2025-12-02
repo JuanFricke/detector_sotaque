@@ -1,0 +1,79 @@
+[
+    {
+        "audio_path": "real_data\\mg_teaser_chico_bento_e_a_goiabeira_maraviosa__9_de_janeiro_de_2025_nos_cinemas.wav",
+        "audio_duration": 65.7589375,
+        "num_segments": 14,
+        "segment_predictions": [
+            {
+                "segment": 1,
+                "predicted_accent": "MG",
+                "confidence": 99.03056621551514
+            },
+            {
+                "segment": 2,
+                "predicted_accent": "MG",
+                "confidence": 32.54046142101288
+            },
+            {
+                "segment": 3,
+                "predicted_accent": "RN",
+                "confidence": 16.22142344713211
+            },
+            {
+                "segment": 4,
+                "predicted_accent": "RJ",
+                "confidence": 66.24472737312317
+            },
+            {
+                "segment": 5,
+                "predicted_accent": "RJ",
+                "confidence": 98.01673293113708
+            },
+            {
+                "segment": 6,
+                "predicted_accent": "RJ",
+                "confidence": 54.54419255256653
+            },
+            {
+                "segment": 7,
+                "predicted_accent": "RJ",
+                "confidence": 99.67484474182129
+            },
+            {
+                "segment": 8,
+                "predicted_accent": "RJ",
+                "confidence": 77.81316637992859
+            },
+            {
+                "segment": 9,
+                "predicted_accent": "RJ",
+                "confidence": 99.76662397384644
+            },
+            {
+                "segment": 10,
+                "predicted_accent": "RJ",
+                "confidence": 99.43841695785522
+            },
+            {
+                "segment": 11,
+                "predicted_accent": "MG",
+                "confidence": 12.538568675518036
+            },
+            {
+                "segment": 12,
+                "predicted_accent": "PE",
+                "confidence": 12.854787707328796
+            },
+            {
+                "segment": 13,
+                "predicted_accent": "SP",
+                "confidence": 15.900522470474243
+            },
+            {
+                "segment": 14,
+                "predicted_accent": "SP",
+                "confidence": 32.21540153026581
+            }
+        ],
+        "predicted_accent": "RJ",
+        "confidence": 

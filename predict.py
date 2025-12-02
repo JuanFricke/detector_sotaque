@@ -75,6 +75,32 @@ class AccentPredictor:
         
         return audio
     
+    def _split_audio_into_segments(self, audio: np.ndarray) -> List[np.ndarray]:
+        """
+        Divide o áudio em segmentos de 5 segundos
+        
+        Args:
+            audio: Array de áudio completo
+        
+        Returns:
+            Lista de segmentos de áudio
+        """
+        segments = []
+        segment_length = self.max_length
+        
+        # Dividir áudio em segmentos
+        for start in range(0, len(audio), segment_length):
+            end = start + segment_length
+            segment = audio[start:end]
+            
+            # Preencher último segmento se for menor que 5 segundos
+            if len(segment) < segment_length:
+                segment = np.pad(segment, (0, segment_length - len(segment)), mode='constant')
+            
+            segments.append(segment)
+        
+        return segments
+    
     def _extract_features(self, audio: np.ndarray) -> np.ndarray:
         """Extrai features do áudio"""
         # Mel-spectrogram
@@ -105,35 +131,103 @@ class AccentPredictor:
         Returns:
             Dicionário com predição e probabilidades
         """
-        # Load and process audio
-        audio = self._load_audio(audio_path)
-        features = self._extract_features(audio)
+        # Carregar áudio completo para verificar duração
+        audio_full, sr = librosa.load(audio_path, sr=self.sample_rate, mono=True)
+        audio_full = librosa.util.normalize(audio_full)
         
-        # Convert to tensor
-        feature_tensor = torch.FloatTensor(features).unsqueeze(0).unsqueeze(0)
-        feature_tensor = feature_tensor.to(self.device)
+        audio_duration = len(audio_full) / self.sample_rate
         
-        # Predict
-        output = self.model(feature_tensor)
-        probs = torch.softmax(output, dim=1)
-        
-        # Get prediction
-        pred_idx = torch.argmax(probs, dim=1).item()
-        pred_label = self.idx_to_label[pred_idx]
-        pred_confidence = probs[0, pred_idx].item()
-        
-        result = {
-            'audio_path': audio_path,
-            'predicted_accent': pred_label,
-            'confidence': pred_confidence
-        }
-        
-        if return_probs:
-            all_probs = {
-                self.idx_to_label[i]: probs[0, i].item()
-                for i in range(self.num_classes)
+        # Se áudio for maior que 5 segundos, dividir em segmentos
+        if audio_duration > 5.0:
+            segments = self._split_audio_into_segments(audio_full)
+            num_segments = len(segments)
+            
+            print(f"   Áudio com {audio_duration:.2f}s detectado - Dividindo em {num_segments} segmentos de 5s...")
+            
+            # Acumular probabilidades de todos os segmentos
+            all_segment_probs = []
+            segment_predictions = []
+            
+            for i, segment in enumerate(segments):
+                # Extrair features do segmento
+                features = self._extract_features(segment)
+                
+                # Convert to tensor
+                feature_tensor = torch.FloatTensor(features).unsqueeze(0).unsqueeze(0)
+                feature_tensor = feature_tensor.to(self.device)
+                
+                # Predict
+                output = self.model(feature_tensor)
+                probs = torch.softmax(output, dim=1)
+                
+                all_segment_probs.append(probs.cpu().numpy()[0])
+                
+                # Armazenar predição do segmento
+                seg_pred_idx = torch.argmax(probs, dim=1).item()
+                seg_pred_label = self.idx_to_label[seg_pred_idx]
+                seg_pred_confidence = probs[0, seg_pred_idx].item()
+                
+                segment_predictions.append({
+                    'segment': i + 1,
+                    'predicted_accent': seg_pred_label,
+                    'confidence': float(seg_pred_confidence * 100)
+                })
+            
+            # Calcular média das probabilidades
+            avg_probs = np.mean(all_segment_probs, axis=0)
+            
+            # Predição final baseada na média
+            pred_idx = np.argmax(avg_probs)
+            pred_label = self.idx_to_label[pred_idx]
+            pred_confidence = avg_probs[pred_idx]
+            
+            result = {
+                'audio_path': audio_path,
+                'audio_duration': float(audio_duration),
+                'num_segments': num_segments,
+                'segment_predictions': segment_predictions,
+                'predicted_accent': pred_label,
+                'confidence': float(pred_confidence)
             }
-            result['all_probabilities'] = all_probs
+            
+            if return_probs:
+                all_probs = {
+                    self.idx_to_label[i]: float(avg_probs[i])
+                    for i in range(self.num_classes)
+                }
+                result['all_probabilities'] = all_probs
+        
+        else:
+            # Áudio menor ou igual a 5 segundos - processar normalmente
+            audio = self._load_audio(audio_path)
+            features = self._extract_features(audio)
+            
+            # Convert to tensor
+            feature_tensor = torch.FloatTensor(features).unsqueeze(0).unsqueeze(0)
+            feature_tensor = feature_tensor.to(self.device)
+            
+            # Predict
+            output = self.model(feature_tensor)
+            probs = torch.softmax(output, dim=1)
+            
+            # Get prediction
+            pred_idx = torch.argmax(probs, dim=1).item()
+            pred_label = self.idx_to_label[pred_idx]
+            pred_confidence = probs[0, pred_idx].item()
+            
+            result = {
+                'audio_path': audio_path,
+                'audio_duration': float(audio_duration),
+                'predicted_accent': pred_label,
+                'confidence': float(pred_confidence)
+            }
+            
+            if return_probs:
+                all_probs = {
+                    self.idx_to_label[i]: probs[0, i].item()
+                    for i in range(self.num_classes)
+                }
+                result['all_probabilities'] = all_probs
         
         return result
     
@@ -165,6 +259,23 @@ class AccentPredictor:
         """Imprime resultado de predição de forma formatada"""
         print("\n" + "="*60)
         print(f"Áudio: {os.path.basename(result['audio_path'])}")
+        
+        # Exibir informação de duração
+        if 'audio_duration' in result:
+            print(f"Duração: {result['audio_duration']:.2f}s")
+        
+        # Se houver múltiplos segmentos, exibir informações detalhadas
+        if 'num_segments' in result and result['num_segments'] > 1:
+            print(f"Segmentos analisados: {result['num_segments']}")
+            print("\n📊 Predições por segmento:")
+            print("-" * 60)
+            
+            for seg_pred in result['segment_predictions']:
+                print(f"  Segmento {seg_pred['segment']}: {seg_pred['predicted_accent']} ({seg_pred['confidence']:.2f}%)")
+            
+            print("-" * 60)
+            print(f"\n📈 Resultado MÉDIO (agregado de {result['num_segments']} segmentos):")
+        
         print(f"Sotaque Predito: {result['predicted_accent']}")
         print(f"Confiança: {result['confidence']*100:.2f}%")
         
