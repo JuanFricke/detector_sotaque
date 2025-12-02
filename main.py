@@ -119,6 +119,188 @@ def list_models_command(args):
     print("\n" + "="*60)
 
 
+def test_all_command(args):
+    """Testa todos os áudios em real_data com um experimento"""
+    from predict import AccentPredictor
+    
+    # Verificar diretório real_data
+    real_data_dir = args.input_dir if hasattr(args, 'input_dir') and args.input_dir else "real_data"
+    
+    if not os.path.exists(real_data_dir):
+        print(f"❌ Erro: Diretório '{real_data_dir}' não encontrado!")
+        return
+    
+    # Buscar todos os arquivos .wav
+    audio_files = glob.glob(os.path.join(real_data_dir, "*.wav"))
+    
+    if not audio_files:
+        print(f"❌ Erro: Nenhum arquivo .wav encontrado em '{real_data_dir}'")
+        return
+    
+    audio_files.sort()
+    
+    print("\n" + "="*70)
+    print(f"🎵 TESTE EM LOTE - {len(audio_files)} ÁUDIOS")
+    print("="*70)
+    
+    # Se checkpoint não foi especificado, buscar automaticamente
+    if not args.checkpoint:
+        experiments_dir = "experiments"
+        if not os.path.exists(experiments_dir):
+            print(f"\n❌ Erro: Diretório de experimentos não encontrado!")
+            print("   Use --checkpoint para especificar um modelo ou treine um modelo primeiro.")
+            return
+        
+        # Buscar experimentos com modelos treinados
+        experiments = []
+        for exp_name in os.listdir(experiments_dir):
+            exp_path = os.path.join(experiments_dir, exp_name)
+            if os.path.isdir(exp_path):
+                best_model_path = os.path.join(exp_path, "best_model.pth")
+                if os.path.exists(best_model_path):
+                    experiments.append({
+                        'name': exp_name,
+                        'path': best_model_path
+                    })
+        
+        if not experiments:
+            print("\n❌ Erro: Nenhum experimento treinado encontrado!")
+            print("   Treine um modelo primeiro ou use --checkpoint para especificar um modelo.")
+            return
+        
+        # Usar o experimento mais recente
+        experiments.sort(key=lambda x: x['name'], reverse=True)
+        checkpoint_path = experiments[0]['path']
+        print(f"\n📊 Usando experimento: {experiments[0]['name']}")
+    else:
+        checkpoint_path = args.checkpoint
+        if not os.path.exists(checkpoint_path):
+            print(f"❌ Erro: Checkpoint não encontrado: {checkpoint_path}")
+            return
+    
+    print(f"📁 Modelo: {checkpoint_path}")
+    print(f"🎙️  Áudios encontrados: {len(audio_files)}")
+    print("-" * 70)
+    
+    # Carregar modelo
+    try:
+        predictor = AccentPredictor(checkpoint_path, device=args.device if hasattr(args, 'device') else None)
+    except Exception as e:
+        print(f"\n❌ Erro ao carregar modelo: {str(e)}")
+        return
+    
+    # Fazer predições
+    print("\n🚀 Iniciando análise em lote...\n")
+    
+    try:
+        results = predictor.predict_batch(audio_files, return_probs=True)
+        
+        # Análise de acurácia baseada nos primeiros 2 caracteres do nome do arquivo
+        correct_predictions = 0
+        incorrect_predictions = 0
+        no_label_count = 0
+        results_with_labels = []
+        
+        # Mostrar resultados com análise de acurácia
+        print("\n" + "="*70)
+        print("📊 RESULTADOS DETALHADOS")
+        print("="*70)
+        
+        for result in results:
+            filename = os.path.basename(result['audio_path'])
+            
+            # Extrair estado esperado dos primeiros 2 caracteres
+            expected_state = filename[:2].upper() if len(filename) >= 2 else None
+            predicted_state = result['predicted_accent'].upper()
+            
+            # Adicionar informações ao resultado
+            result['expected_state'] = expected_state
+            result['is_correct'] = None
+            
+            if expected_state and len(expected_state) == 2 and expected_state.isalpha():
+                is_correct = (expected_state == predicted_state)
+                result['is_correct'] = is_correct
+                
+                if is_correct:
+                    correct_predictions += 1
+                    status_icon = "✅"
+                    status_text = "CORRETO"
+                else:
+                    incorrect_predictions += 1
+                    status_icon = "❌"
+                    status_text = "INCORRETO"
+                
+                print(f"\n{status_icon} {filename}")
+                print(f"   Esperado: {expected_state} | Predito: {predicted_state} | {status_text}")
+                print(f"   Confiança: {result['confidence']*100:.2f}%")
+                
+                # Mostrar top 3 probabilidades
+                if 'all_probabilities' in result:
+                    print(f"   Top 3 predições:")
+                    # Ordenar por probabilidade
+                    sorted_probs = sorted(result['all_probabilities'].items(), key=lambda x: x[1], reverse=True)
+                    for i, (state, prob) in enumerate(sorted_probs[:3], 1):
+                        marker = "👉" if state.upper() == expected_state else "  "
+                        print(f"   {marker} {i}. {state}: {prob*100:.2f}%")
+            else:
+                no_label_count += 1
+                print(f"\n⚪ {filename}")
+                print(f"   Predito: {predicted_state} (sem label esperado)")
+                print(f"   Confiança: {result['confidence']*100:.2f}%")
+            
+            print("-" * 70)
+            results_with_labels.append(result)
+        
+        # Calcular e exibir estatísticas
+        total_labeled = correct_predictions + incorrect_predictions
+        
+        print("\n" + "="*70)
+        print("📈 ESTATÍSTICAS DE DESEMPENHO")
+        print("="*70)
+        
+        if total_labeled > 0:
+            accuracy = (correct_predictions / total_labeled) * 100
+            print(f"\n✅ Predições Corretas:    {correct_predictions}/{total_labeled}")
+            print(f"❌ Predições Incorretas:  {incorrect_predictions}/{total_labeled}")
+            print(f"📊 Acurácia:              {accuracy:.2f}%")
+        
+        if no_label_count > 0:
+            print(f"\n⚪ Sem label (primeiros 2 chars não são estado): {no_label_count}")
+        
+        print(f"\n📁 Total de arquivos:     {len(results)}")
+        
+        # Salvar resultados automaticamente
+        output_file = args.output if hasattr(args, 'output') and args.output else f"batch_test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        
+        # Adicionar estatísticas ao arquivo JSON
+        output_data = {
+            'timestamp': datetime.now().isoformat(),
+            'model': checkpoint_path,
+            'total_files': len(results),
+            'statistics': {
+                'total_labeled': total_labeled,
+                'correct_predictions': correct_predictions,
+                'incorrect_predictions': incorrect_predictions,
+                'no_label_count': no_label_count,
+                'accuracy_percentage': (correct_predictions / total_labeled * 100) if total_labeled > 0 else 0
+            },
+            'results': results_with_labels
+        }
+        
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(output_data, f, indent=4, ensure_ascii=False)
+        
+        print(f"\n💾 Resultados salvos em: {output_file}")
+        print("\n" + "="*70)
+        print(f"✅ TESTE CONCLUÍDO")
+        print("="*70)
+        
+    except Exception as e:
+        print(f"\n❌ Erro durante a análise: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+
 def list_experiments_command(args):
     """Lista experimentos salvos"""
     experiments_dir = "experiments"
@@ -362,6 +544,9 @@ Exemplos de uso:
   # Menu interativo
   python main.py interactive
 
+  # Testar todos os áudios em real_data
+  python main.py test-all
+
   # Análise exploratória dos dados
   python main.py analyze
 
@@ -381,8 +566,19 @@ Exemplos de uso:
     
     subparsers = parser.add_subparsers(dest='command', help='Comando a executar')
     
-    # Comando: interactive (NOVO)
+    # Comando: interactive
     subparsers.add_parser('interactive', help='Menu interativo para análise de áudios')
+    
+    # Comando: test-all (NOVO)
+    test_all_parser = subparsers.add_parser('test-all', help='Testar todos os áudios em real_data')
+    test_all_parser.add_argument('--checkpoint', default=None,
+                                 help='Caminho para o checkpoint (opcional, usa o mais recente se não especificado)')
+    test_all_parser.add_argument('--input-dir', default='real_data',
+                                 help='Diretório com os áudios (padrão: real_data)')
+    test_all_parser.add_argument('--output', default=None,
+                                 help='Arquivo de saída JSON (padrão: batch_test_results_TIMESTAMP.json)')
+    test_all_parser.add_argument('--device', default=None,
+                                 help='Device (cuda ou cpu)')
     
     # Comando: analyze
     analyze_parser = subparsers.add_parser('analyze', help='Análise exploratória dos dados')
@@ -447,6 +643,8 @@ Exemplos de uso:
     # Executar comando
     if args.command == 'interactive':
         interactive_menu()
+    elif args.command == 'test-all':
+        test_all_command(args)
     elif args.command == 'analyze':
         analyze_command(args)
     elif args.command == 'train':
